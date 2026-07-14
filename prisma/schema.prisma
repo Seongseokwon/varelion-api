@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  nickname     String   @unique
+  createdAt    DateTime @default(now())
+
+  refreshTokens RefreshToken[]
+  runs          Run[]
+  save          GameSave?
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// 메타 진행(프론트 LocalStorage save 객체)의 서버 사본 — 유저당 1개.
+// 자주 조회·검증하는 값은 컬럼으로, 구조가 변할 수 있는 나머지(job, bestTime,
+// seenJobs, stats, stagesCleared, 이후 추가 필드)는 data JSONB로 — docs/save-sync/spec.md FR-1.
+model GameSave {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  metaLevel Int      @default(1)
+  metaXp    Int      @default(0)
+  gold      Int      @default(0)
+  data      Json     @default("{}")
+  version   Int      @default(0) // 동기화 충돌 감지용 낙관적 잠금 (FR-3/FR-4)
+  updatedAt DateTime @updatedAt // FR-7 경과 시간 기반 검증의 기준 시각
+}
+
+// 판 하나의 결과 기록 (리더보드의 원천 데이터). 데일리 챌린지(challengeId 등)는
+// 이번 범위(Phase 3) 밖이라 포함하지 않음 — docs/landing-auth-leaderboard/plan.md 참고.
+model Run {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  job          String // 플레이한 직업 id (src/data/jobs.js와 수동 동기화 대상)
+  survivalTime Int // 초 단위
+  kills        Int
+  level        Int // 세션 레벨
+  goldEarned   Int
+  metaLevel    Int? // 제출 시점의 계정 메타 레벨 스냅샷 — 과거 Run은 NULL(리더보드 집계 시 0 취급)
+  createdAt    DateTime @default(now())
+
+  @@index([survivalTime(sort: Desc)]) // 전체 리더보드용
+  @@index([userId, createdAt]) // 직전 제출 조회용
+}
