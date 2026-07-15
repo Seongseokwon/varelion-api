@@ -37,12 +37,13 @@ export class LeaderboardService {
                SUM(kills)::int AS "totalKills",
                SUM("survivalTime")::int AS "totalSurvivalTime"
         FROM "Run"
+        WHERE "leaderboardEligible" = true
         GROUP BY "userId"
       ) agg
       JOIN "User" u ON u.id = agg."userId"
       JOIN LATERAL (
         SELECT job FROM "Run" r
-        WHERE r."userId" = agg."userId"
+        WHERE r."userId" = agg."userId" AND r."leaderboardEligible" = true
         ORDER BY r."createdAt" DESC LIMIT 1
       ) latest ON true
       ORDER BY agg."metaLevel" DESC, agg."totalKills" DESC, agg."totalSurvivalTime" DESC
@@ -70,12 +71,13 @@ export class LeaderboardService {
                  SUM(kills)::int AS "totalKills",
                  SUM("survivalTime")::int AS "totalSurvivalTime"
           FROM "Run"
+          WHERE "leaderboardEligible" = true
           GROUP BY "userId"
         ) agg
         JOIN "User" u ON u.id = agg."userId"
         JOIN LATERAL (
           SELECT job FROM "Run" r
-          WHERE r."userId" = agg."userId"
+          WHERE r."userId" = agg."userId" AND r."leaderboardEligible" = true
           ORDER BY r."createdAt" DESC LIMIT 1
         ) latest ON true
       ) ranked

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsInt, Max, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 // src/data/jobs.js(survival-rpg 프론트)의 직업 id와 수동으로 동기화해야 함 —
 // 모노레포지만 타입 공유 설정이 없어 백엔드에 별도로 하드코딩함.
@@ -48,4 +48,11 @@ export class CreateRunDto {
   @Min(1)
   @Max(META_LEVEL_CAP)
   metaLevel: number;
+
+  // battle-session-validation FR-6/FR-8: 없으면(구 클라이언트·세션 생성 실패) 요청은
+  // 그대로 처리되고 leaderboardEligible=false로만 저장된다 — 하위 호환 유지.
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  sessionId?: string;
 }

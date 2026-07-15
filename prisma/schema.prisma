@@ -20,9 +20,10 @@ model User {
   nickname     String   @unique
   createdAt    DateTime @default(now())
 
-  refreshTokens RefreshToken[]
-  runs          Run[]
-  save          GameSave?
+  refreshTokens  RefreshToken[]
+  runs           Run[]
+  save           GameSave?
+  battleSessions BattleSession[]
 }
 
 model RefreshToken {
@@ -66,6 +67,41 @@ model Run {
   metaLevel    Int? // 제출 시점의 계정 메타 레벨 스냅샷 — 과거 Run은 NULL(리더보드 집계 시 0 취급)
   createdAt    DateTime @default(now())
 
+  // battle-session-validation: 대조검증 결과. 기존 행은 마이그레이션 시 true로 채워져
+  // 기능 도입 이전 기록이 소급 제외되지 않는다(그랜드파더링, plan.md 아키텍처 결정).
+  leaderboardEligible Boolean        @default(true)
+  sessionId           String?
+  session             BattleSession? @relation(fields: [sessionId], references: [id])
+
   @@index([survivalTime(sort: Desc)]) // 전체 리더보드용
   @@index([userId, createdAt]) // 직전 제출 조회용
+}
+
+// 판 하나에 대응하는 전투 세션 — docs/battle-session-validation/spec.md FR-1.
+// status: "active"(진행 중) | "finalized"(제출 대조 완료). 미종료 방치 세션은 그대로 둔다(FR-11).
+model BattleSession {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  status      String    @default("active")
+  startedAt   DateTime  @default(now())
+  finalizedAt DateTime?
+
+  events BattleEvent[]
+  runs   Run[]
+
+  @@index([userId])
+}
+
+// 세션에 속한 개별 이벤트 로그(집계 컬럼 대신 원본 이력 보존 — plan.md 사용자 결정).
+// type: "kills"(payload: killsDelta/goldDelta) | "level-up"(level) | "stage-clear"(stageId)
+model BattleEvent {
+  id        String        @id @default(uuid())
+  sessionId String
+  session   BattleSession @relation(fields: [sessionId], references: [id])
+  type      String
+  payload   Json
+  createdAt DateTime      @default(now())
+
+  @@index([sessionId])
 }

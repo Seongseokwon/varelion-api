@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { RunsModule } from './runs/runs.module';
 import { SavesModule } from './saves/saves.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { BattleSessionsModule } from './battle-sessions/battle-sessions.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
     RunsModule,
     SavesModule,
     LeaderboardModule,
+    BattleSessionsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
