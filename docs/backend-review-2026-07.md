@@ -15,11 +15,11 @@
 | 3 | Run_survivalTime_idx 죽은 인덱스 정리 | 🔴 | ☑ | ☑ |
 | 4 | 리더보드 쿼리 캐싱 전환 기준 수립 | 🟡 | ☑ | ☑ |
 | 5 | leaderboard.service.ts 쿼리 중복 제거 | 🟡 | ☑ | ☑ |
-| 6 | 프론트-백 상수 동기화 구조 개선 | 🟡 | ☑ | ❌ **재작업 필요(빌드 깨짐)** |
-| 7 | battle-sessions/runs 유닛 테스트 추가 | 🟡 | ☑ | ⚠️ **lint 에러 수정 필요** |
+| 6 | 프론트-백 상수 동기화 구조 개선 | 🟡 | ☑ | ☑ |
+| 7 | battle-sessions/runs 유닛 테스트 추가 | 🟡 | ☑ | ☑ |
 | 8 | User 삭제 캐스케이드 전략 설계 | 🟡 | ☑ | ☑ |
 
-체크는 완료 시 `☐` → `☑`로 직접 바꿔서 표시. QA 결과는 각 항목의 "QA 결과(2026-07-17)" 참고.
+체크는 완료 시 `☐` → `☑`로 직접 바꿔서 표시. QA 결과는 각 항목의 "QA 결과" 참고(재확인 시 날짜 추가).
 
 ---
 
@@ -114,8 +114,20 @@ node dist/main
 2. 또는 `tsconfig.build.json`에 `"rootDir": "./src"`를 명시하고, JSON은 `fs.readFileSync` + `JSON.parse`로 런타임 로드(빌드 타임 import 대신) — `src/` 바깥 파일 위치를 유지하고 싶다면 이 방향.
 어느 쪽이든 **수정 후 반드시 `rm -rf dist && npm run build && node dist/main`으로 재현 스크립트를 다시 돌려 `dist/main.js`가 원래 위치에 뜨는지 확인 필요**.
 
+---
+
+**재검증 결과(2026-07-17, 커밋 `7be3dd1`)**: ✅ **PASS로 전환.** 제안 1번 방식대로 `config/game-balance.json` → `src/config/game-balance.json`으로 이동, import 경로도 `./game-balance.json`으로 수정됨. `README.md`의 안내 문구도 새 경로로 갱신됨.
+
+재현 스크립트 그대로 재실행해서 확인:
+```
+rm -rf dist && npm run build
+ls dist            # → app.controller.js, main.js, config/, ... (flat, 정상 위치)
+node dist/main      # 정상 부팅
+```
+`node dist/main`으로 실제 앱을 띄워 `GET /api`(Swagger 문서 라우트)에 `curl`로 200 응답 확인. 부팅 로그에 `PrismaModule`/`PassportModule` 등 정상 초기화 로그도 확인. 프로세스는 검증 후 종료, 포트 점유 없음 확인. `put-save.dto.ts`의 unused import 4건도 `META_XP_BASE`/`META_XP_POW`만 남기고 나머지는 import 없이 재-export만 하도록 정리되어 있어 그 부분 lint 에러도 함께 해소됨(아래 7번과 별개로 6번 자체 회귀는 없음).
+
 - [x] 구현 완료
-- [ ] QA 검증 완료
+- [x] QA 검증 완료
 
 ## 7. battle-sessions/runs 유닛 테스트 추가 🟡
 
@@ -139,8 +151,26 @@ node dist/main
 
 런타임 동작에는 영향 없지만 `npm run lint`가 실패 종료 코드를 반환하므로 CI에 lint 게이트가 있다면 그 자체로 파이프라인이 막힌다. 목(mock) 객체에 최소한의 타입(`Partial<PrismaService>` 또는 인터페이스)을 지정하는 정도로 해결 가능.
 
+---
+
+**재검증 결과(2026-07-17, 커밋 `7be3dd1`)**: ⚠️ **아직 PARTIAL.** 원래 지적한 두 건(`no-unsafe-assignment`, `no-unsafe-return`)은 해결됨 — `runs.service.spec.ts`는 `mockResolvedValue`로 고정값을 반환하도록 바뀌어 `any` 반환 문제가 없어짐. `refresh-token-cleanup.service.spec.ts`는 `DeleteManyArgs` 인터페이스 + `PrismaService`로 목 타입을 지정해 `unsafe-assignment`는 해결됨.
+
+다만 그 수정 과정에서 같은 파일에 **새 lint 에러 2건**이 생김(`npx eslint "{src,apps,libs,test}/**/*.ts"`로 재확인):
+- `refresh-token-cleanup.service.spec.ts:13:14` — `_args`가 실제로 안 쓰여서 `no-unused-vars`. 언더스코어 접두사 컨벤션을 쓴 것으로 보이는데, 이 프로젝트 `eslint.config.mjs`에는 `argsIgnorePattern: '^_'` 설정이 없어서 언더스코어가 자동으로 무시되지 않음.
+- `refresh-token-cleanup.service.spec.ts:13:65` — 콜백이 `async`인데 내부에 `await`가 없어 `require-await`.
+
+가장 간단한 해법은 그 콜백을 `async` 없이 동기 함수로 두거나(`jest.fn()`은 반환값이 Promise가 아니어도 `mockResolvedValue`처럼 동작하도록 굳이 async일 필요 없음), 파라미터 자체를 없애는 것(`jest.fn(async () => ({ count: 2 }))` 형태로 `_args`를 아예 받지 않기). `npm run test`(7개 전부 통과)와 `npm run build`/`node dist/main`(정상 기동)에는 영향 없음 — 순수 lint 게이트 문제로 남아 있음.
+
+---
+
+**재검증 결과(2026-07-17, 커밋 `c5becd5`)**: ✅ **PASS로 전환.** `deleteMany` 목을 `async` 없는 일반 함수로 바꾸고 `args`를 `receivedArgs`에 실제로 대입해 사용하도록 고쳐, 지적한 두 에러(`no-unused-vars`, `require-await`) 모두 해소됨.
+
+`npx eslint "{src,apps,libs,test}/**/*.ts"`(--fix 없이) 재실행 결과 남은 에러는 `refresh-token-cleanup.service.ts`의 prettier 줄바꿈 스타일 1건뿐 — 이건 6번 작업 이전부터 있던 것과 동일한 자동수정 가능(`--fix`) 대상이라 `npm run lint`(프로젝트 실제 스크립트, `--fix` 포함) 실행 시 자동으로 해결되어 에러 0건으로 끝남. 이번 QA 대상이었던 항목과는 무관한 기존 스타일 이슈라 이 항목 판정에 영향 없음.
+
+`npm test` 7개 전부 통과 재확인. 전체 아이템 최종 확인 차원에서 클린 빌드 후 실제 `start:prod` 진입점을 별도 포트(3099)로 직접 기동해 모든 모듈(`RefreshTokenCleanupService`가 속한 `AuthModule` 포함)과 라우트가 정상 등록되고 "Nest application successfully started" 로그와 `GET /api` 200 응답까지 확인, 프로세스 종료 후 포트 점유 없음 확인.
+
 - [x] 구현 완료
-- [ ] QA 검증 완료 (lint 통과 후 재확인 필요)
+- [x] QA 검증 완료
 
 ## 8. User 삭제 캐스케이드 전략 설계 🟡
 
