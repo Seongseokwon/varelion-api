@@ -96,10 +96,18 @@ export class SavesService {
     };
   }
 
-  private async recordMetaLevels(userId: string, before: number, after: number) {
+  private async recordMetaLevels(
+    userId: string,
+    before: number,
+    after: number,
+  ) {
     const reachedAt = new Date();
     for (let level = Math.max(1, before + 1); level <= after; level++) {
-      await this.prisma.metaLevelReached.upsert({ where: { userId_level: { userId, level } }, create: { userId, level, reachedAt }, update: {} });
+      await this.prisma.metaLevelReached.upsert({
+        where: { userId_level: { userId, level } },
+        create: { userId, level, reachedAt },
+        update: {},
+      });
     }
   }
 

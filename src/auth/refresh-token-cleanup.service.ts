@@ -16,7 +16,9 @@ export class RefreshTokenCleanupService {
       },
     });
     if (result.count > 0) {
-      this.logger.log(`Removed ${result.count} expired or revoked refresh tokens`);
+      this.logger.log(
+        `Removed ${result.count} expired or revoked refresh tokens`,
+      );
     }
     return result.count;
   }
