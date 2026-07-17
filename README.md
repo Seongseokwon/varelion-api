@@ -31,6 +31,25 @@
 $ npm install
 ```
 
+## Local development (DB + env)
+
+```bash
+# 1. 환경변수 설정
+$ cp .env.example .env
+
+# 2. PostgreSQL 컨테이너 실행 (docker-compose.yml)
+$ npm run db:up
+
+# 3. 마이그레이션 적용
+$ npx prisma migrate dev
+
+# 4. DB 컨테이너 중지
+$ npm run db:down
+
+# DB 로그 확인
+$ npm run db:logs
+```
+
 ## Compile and run the project
 
 ```bash
