@@ -9,18 +9,22 @@ interface DeleteManyArgs {
 
 describe('RefreshTokenCleanupService', () => {
   it('deletes expired or revoked refresh tokens', async () => {
-    const deleteMany = jest.fn(
-      async (_args: DeleteManyArgs): Promise<{ count: number }> => ({
-        count: 2,
-      }),
-    );
+    let receivedArgs: DeleteManyArgs | undefined;
+    const deleteMany = jest.fn<
+      (args: DeleteManyArgs) => Promise<{ count: number }>
+    >((args: DeleteManyArgs) => {
+      receivedArgs = args;
+      return Promise.resolve({ count: 2 });
+    });
     const prisma = { refreshToken: { deleteMany } } as unknown as PrismaService;
     const service = new RefreshTokenCleanupService(prisma);
 
     await expect(service.removeExpiredOrRevokedTokens()).resolves.toBe(2);
     expect(deleteMany).toHaveBeenCalledTimes(1);
-    const [args] = deleteMany.mock.calls[0];
-    expect(args.where.OR[0].expiresAt.lt).toBeInstanceOf(Date);
-    expect(args.where.OR[1]).toEqual({ revoked: true });
+    if (!receivedArgs) {
+      throw new Error('deleteMany was not called');
+    }
+    expect(receivedArgs.where.OR[0].expiresAt.lt).toBeInstanceOf(Date);
+    expect(receivedArgs.where.OR[1]).toEqual({ revoked: true });
   });
 });
