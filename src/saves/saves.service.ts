@@ -60,6 +60,7 @@ export class SavesService {
           version: dto.version + 1,
         },
       });
+      await this.recordMetaLevels(userId, 0, created.metaLevel);
       return { conflict: false, body: this.toResponse(created) };
     }
 
@@ -77,6 +78,7 @@ export class SavesService {
         ...columns,
         data: data as Prisma.InputJsonObject,
         version: dto.version + 1,
+        lastActiveAt: new Date(),
       },
     });
     if (updated.count === 0) {
@@ -87,10 +89,18 @@ export class SavesService {
       if (!current) throw new NotFoundException('save not found');
       return { conflict: true, body: this.toResponse(current) };
     }
+    await this.recordMetaLevels(userId, existing.metaLevel, columns.metaLevel);
     return {
       conflict: false,
       body: { version: dto.version + 1, save: dto.save },
     };
+  }
+
+  private async recordMetaLevels(userId: string, before: number, after: number) {
+    const reachedAt = new Date();
+    for (let level = Math.max(1, before + 1); level <= after; level++) {
+      await this.prisma.metaLevelReached.upsert({ where: { userId_level: { userId, level } }, create: { userId, level, reachedAt }, update: {} });
+    }
   }
 
   // FR-6: DTO는 save를 통짜 객체로 받으므로(미지 필드 보존) 알려진 필드는 여기서 검증한다.

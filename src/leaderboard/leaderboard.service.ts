@@ -8,7 +8,7 @@ export interface LeaderboardEntry {
   job: string;
   metaLevel: number;
   totalKills: number;
-  totalSurvivalTime: number;
+  firstReachedAt: Date | null;
 }
 
 export const DEFAULT_LEADERBOARD_LIMIT = 10;
@@ -17,7 +17,7 @@ export const MAX_LEADERBOARD_LIMIT = 100;
 const leaderboardEntriesCte = Prisma.sql`
   leaderboard_entries AS (
     SELECT agg."userId", u.nickname, latest.job,
-           agg."metaLevel", agg."totalKills", agg."totalSurvivalTime"
+           agg."metaLevel", agg."totalKills", mlr."reachedAt" AS "firstReachedAt"
     FROM (
       SELECT "userId",
              MAX(COALESCE("metaLevel", 0)) AS "metaLevel",
@@ -33,6 +33,7 @@ const leaderboardEntriesCte = Prisma.sql`
       WHERE r."userId" = agg."userId" AND r."leaderboardEligible" = true
       ORDER BY r."createdAt" DESC LIMIT 1
     ) latest ON true
+    LEFT JOIN "MetaLevelReached" mlr ON mlr."userId" = agg."userId" AND mlr.level = agg."metaLevel"
   )
 `;
 
@@ -53,7 +54,7 @@ export class LeaderboardService {
     return this.prisma.$queryRaw<LeaderboardEntry[]>(Prisma.sql`
       WITH ${leaderboardEntriesCte}
       SELECT * FROM leaderboard_entries
-      ORDER BY "metaLevel" DESC, "totalKills" DESC, "totalSurvivalTime" DESC
+      ORDER BY "metaLevel" DESC, "firstReachedAt" ASC NULLS LAST, "totalKills" DESC
       LIMIT ${safeLimit}
     `);
   }
@@ -67,12 +68,12 @@ export class LeaderboardService {
       WITH ${leaderboardEntriesCte},
       ranked AS (
         SELECT *, RANK() OVER (
-          ORDER BY "metaLevel" DESC, "totalKills" DESC, "totalSurvivalTime" DESC
+          ORDER BY "metaLevel" DESC, "firstReachedAt" ASC NULLS LAST, "totalKills" DESC
         ) AS rank
         FROM leaderboard_entries
       )
       SELECT ranked."userId", ranked.nickname, ranked.job,
-             ranked."metaLevel", ranked."totalKills", ranked."totalSurvivalTime", ranked.rank
+             ranked."metaLevel", ranked."totalKills", ranked."firstReachedAt", ranked.rank
       FROM ranked
       WHERE ranked."userId" = ${userId}
     `);

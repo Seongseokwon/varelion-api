@@ -24,6 +24,7 @@ model User {
   runs           Run[]
   save           GameSave?
   battleSessions BattleSession[]
+  metaLevels     MetaLevelReached[]
 }
 
 model RefreshToken {
@@ -51,7 +52,18 @@ model GameSave {
   gold      Int      @default(0)
   data      Json     @default("{}")
   version   Int      @default(0) // 동기화 충돌 감지용 낙관적 잠금 (FR-3/FR-4)
+  lastActiveAt DateTime @default(now())
   updatedAt DateTime @updatedAt // FR-7 경과 시간 기반 검증의 기준 시각
+}
+
+model MetaLevelReached {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  level Int
+  reachedAt DateTime @default(now())
+  @@unique([userId, level])
+  @@index([level, reachedAt])
 }
 
 // 판 하나의 결과 기록 (리더보드의 원천 데이터). 데일리 챌린지(challengeId 등)는

@@ -11,6 +11,7 @@ import { SavesModule } from './saves/saves.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { BattleSessionsModule } from './battle-sessions/battle-sessions.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { IdleRewardsModule } from './idle-rewards/idle-rewards.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     SavesModule,
     LeaderboardModule,
     BattleSessionsModule,
+    IdleRewardsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

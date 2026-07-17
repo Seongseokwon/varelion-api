@@ -10,3 +10,4 @@ export const MAX_XP_PER_SEC = balance.saveGrowthLimits.xpPerSecond;
 export const MAX_GOLD_PER_SEC = balance.saveGrowthLimits.goldPerSecond;
 export const XP_BASE_ALLOWANCE = balance.saveGrowthLimits.xpBaseAllowance;
 export const GOLD_BASE_ALLOWANCE = balance.saveGrowthLimits.goldBaseAllowance;
+export const IDLE_REWARDS = balance.idleRewards;
