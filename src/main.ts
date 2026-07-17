@@ -19,8 +19,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Survivor API')
-    .setDescription('SurvivorWeb backend API')
+    .setTitle('Varelion API')
+    .setDescription('Varelion backend API')
     .setVersion('0.1')
     .addBearerAuth()
     .build();
