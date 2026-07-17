@@ -1,0 +1,14 @@
+{
+  "validJobIds": ["novice", "warrior", "barbarian", "berserker", "warlord"],
+  "metaLevelCap": 100,
+  "metaXp": {
+    "base": 25,
+    "power": 1.5
+  },
+  "saveGrowthLimits": {
+    "xpPerSecond": 20,
+    "goldPerSecond": 5,
+    "xpBaseAllowance": 25000,
+    "goldBaseAllowance": 2000
+  }
+}

@@ -43,6 +43,15 @@
 
 > **학습 팁**: 처음부터 Redis를 넣지 말 것. "PostgreSQL로 만들고 → 느려질 지점을 이해하고 → Redis로 교체"하는 순서가 캐시를 배우는 가장 좋은 방법이다.
 
+### 2.1 리더보드 캐시 전환 기준
+
+운영 데이터에서 아래 조건 중 하나가 충족되면 PostgreSQL 전체 집계를 Redis Sorted Set 기반으로 전환한다.
+
+- `Run` 테이블이 100,000행 이상
+- `GET /leaderboard` 또는 `GET /leaderboard/me`의 p95 응답 시간이 7일 관측 기준 200ms 초과
+
+전환 시 쓰기 경로에서 유저별 집계 점수를 갱신하고, Redis 장애 시 PostgreSQL 쿼리로 폴백한다. 행 수는 주 1회, p95는 운영 모니터링에서 확인한다.
+
 ---
 
 ## 3. 전체 아키텍처
@@ -267,6 +276,10 @@ NestJS 구현 요소: `JwtStrategy`(passport-jwt) → `JwtAuthGuard` → `@Curre
 - **CORS**: 게임이 정적 호스팅(다른 도메인)에서 서빙되므로 반드시 설정.
 - **환경변수**: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CORS_ORIGIN`. `.env`는 git에 커밋하지 않는다.
 - **헬스체크**: `GET /health` — 배포·모니터링의 최소 단위.
+
+### 8.1 회원탈퇴 데이터 정책
+
+회원탈퇴는 개인정보를 남기지 않는 **완전 삭제**를 기본 정책으로 한다. 탈퇴 기능 구현 시 하나의 트랜잭션에서 자식 데이터를 먼저 삭제한 뒤 User를 삭제한다. 모델별 방침은 `RefreshToken`, `GameSave`, `BattleSession`(하위 `BattleEvent` 포함)은 캐스케이드 삭제, `Run`은 리더보드 기록까지 함께 삭제다. Prisma 관계에는 해당 기능 마이그레이션에서 `onDelete: Cascade`를 적용한다. 기능 도입 전에는 현재의 `RESTRICT`를 유지해 실수로 User만 삭제되어 고아 데이터가 생기는 일을 막는다.
 
 ```yaml
 # docker-compose.yml (로컬 개발용)

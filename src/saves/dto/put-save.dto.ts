@@ -1,5 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, IsObject, Min } from 'class-validator';
+import {
+  GOLD_BASE_ALLOWANCE,
+  MAX_GOLD_PER_SEC,
+  MAX_XP_PER_SEC,
+  META_XP_BASE,
+  META_XP_POW,
+  XP_BASE_ALLOWANCE,
+} from '../../config/game-balance';
+
+export {
+  GOLD_BASE_ALLOWANCE,
+  MAX_GOLD_PER_SEC,
+  MAX_XP_PER_SEC,
+  META_XP_BASE,
+  META_XP_POW,
+  XP_BASE_ALLOWANCE,
+} from '../../config/game-balance';
 
 // save 본문을 중첩 DTO로 정의하지 않는 이유: 전역 ValidationPipe(whitelist:true)가
 // 중첩 DTO에 없는 필드를 조용히 제거한다 — 프론트에 새 세이브 필드가 생기면 서버가
@@ -26,17 +43,10 @@ export class PutSaveDto {
 // 실측 근거(프론트 코드와 수동 동기화 대상):
 //   XP: systems/flow.js earnedXp = time*2 + kills*1.5, 킬 상한 5/s(runs 모듈) → 최대 9.5/s
 //   골드: systems/enemies.js 킬 4%×1 + 보스 15/45s → 최대 ≈0.53/s
-export const MAX_XP_PER_SEC = 20;
-export const MAX_GOLD_PER_SEC = 5;
 // 기본 허용량: 정산 직후 업로드(경과≈0)와 시계 오차를 흡수 — 최대 1판치(XP 11400)의 ~2배.
-export const XP_BASE_ALLOWANCE = 25000;
-export const GOLD_BASE_ALLOWANCE = 2000;
 
 // src/state/save.js(프론트)의 메타 레벨업 곡선 복제 — metaXp는 레벨업 시 차감되는
 // "현재 레벨 내 잔여 XP"라서 증가폭 비교는 누적 총XP로 환산해야 한다.
-export const META_XP_BASE = 25;
-export const META_XP_POW = 1.5;
-
 export function metaXpFor(lv: number): number {
   return Math.floor(META_XP_BASE * Math.pow(lv, META_XP_POW));
 }

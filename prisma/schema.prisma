@@ -36,6 +36,7 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([tokenHash])
 }
 
 // 메타 진행(프론트 LocalStorage save 객체)의 서버 사본 — 유저당 1개.
@@ -73,7 +74,6 @@ model Run {
   sessionId           String?
   session             BattleSession? @relation(fields: [sessionId], references: [id])
 
-  @@index([survivalTime(sort: Desc)]) // 전체 리더보드용
   @@index([userId, createdAt]) // 직전 제출 조회용
 }
 
