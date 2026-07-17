@@ -1,4 +1,4 @@
-import balance from '../../config/game-balance.json';
+import balance from './game-balance.json';
 
 // Portable JSON is the contract shared with the frontend repository. Keep all
 // runtime typing/coercion here so DTOs and services consume one source of truth.

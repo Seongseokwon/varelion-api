@@ -1,13 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, IsObject, Min } from 'class-validator';
-import {
-  GOLD_BASE_ALLOWANCE,
-  MAX_GOLD_PER_SEC,
-  MAX_XP_PER_SEC,
-  META_XP_BASE,
-  META_XP_POW,
-  XP_BASE_ALLOWANCE,
-} from '../../config/game-balance';
+import { META_XP_BASE, META_XP_POW } from '../../config/game-balance';
 
 export {
   GOLD_BASE_ALLOWANCE,

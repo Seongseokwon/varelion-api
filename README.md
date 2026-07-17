@@ -115,6 +115,7 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
 # Shared game balance contract
 
-`config/game-balance.json` is the portable source of truth for job IDs, the meta-level curve, and save-growth validation limits. The frontend repository should consume or copy this file in its build pipeline; balance changes must start in this JSON rather than in DTOs or services.
+`src/config/game-balance.json` is the portable source of truth for job IDs, the meta-level curve, and save-growth validation limits. The frontend repository should consume or copy this file in its build pipeline; balance changes must start in this JSON rather than in DTOs or services.

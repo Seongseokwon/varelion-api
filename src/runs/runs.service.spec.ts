@@ -20,9 +20,9 @@ describe('RunsService.create', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('rejects an impossible kills-per-second ratio', async () => {
-    await expect(service.create('user', { ...dto, kills: 51 })).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.create('user', { ...dto, kills: 51 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.run.findFirst).not.toHaveBeenCalled();
   });
 
@@ -39,7 +39,12 @@ describe('RunsService.create', () => {
 
   it('stores a run without a session as leaderboard-ineligible', async () => {
     prisma.run.findFirst.mockResolvedValue(null);
-    prisma.run.create.mockImplementation(({ data }) => data);
+    prisma.run.create.mockResolvedValue({
+      userId: 'user',
+      ...dto,
+      sessionId: null,
+      leaderboardEligible: false,
+    });
 
     await expect(service.create('user', dto)).resolves.toMatchObject({
       sessionId: null,
