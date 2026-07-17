@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { recordMetaLevels } from '../common/meta-level-reached';
 import {
   IDLE_REWARDS,
   META_LEVEL_CAP,
@@ -53,12 +54,7 @@ export class IdleRewardsService {
           version: { increment: 1 },
         },
       });
-      for (let level = row.metaLevel + 1; level <= metaLevel; level++)
-        await tx.metaLevelReached.upsert({
-          where: { userId_level: { userId, level } },
-          create: { userId, level, reachedAt: now },
-          update: {},
-        });
+      await recordMetaLevels(tx, userId, row.metaLevel, metaLevel, now);
       return {
         elapsedSec,
         goldGained,
