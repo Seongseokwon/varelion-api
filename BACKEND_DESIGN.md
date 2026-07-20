@@ -1,4 +1,4 @@
-# 백엔드 설계 문서 — SurvivorWeb (NestJS)
+# 백엔드 설계 문서 — Varelion (NestJS)
 
 > **문서 버전** v1.0 · 작성일 2026-07-09
 > **대상** 학습하며 직접 구현할 개발자 본인
@@ -38,10 +38,19 @@
 | 요청 제한 | **@nestjs/throttler** | 점수 제출 스팸 방지 |
 | 캐시/랭킹 | **Redis** (나중에) | 리더보드를 Sorted Set으로. 처음엔 PostgreSQL만으로 시작해도 충분 |
 | 테스트 | **Jest + supertest** | Nest 기본 내장 |
-| 호스팅 (확정) | **Railway** (`survivor-api`) + Postgres | 프론트는 **Vercel** |
+| 호스팅 (확정) | **Railway** (`varelion-api`) + Postgres | 프론트는 **Vercel** |
 | 로컬 인프라 | **Docker Compose** | PostgreSQL(+Redis)을 명령 한 줄로 실행 |
 
 > **학습 팁**: 처음부터 Redis를 넣지 말 것. "PostgreSQL로 만들고 → 느려질 지점을 이해하고 → Redis로 교체"하는 순서가 캐시를 배우는 가장 좋은 방법이다.
+
+### 2.1 리더보드 캐시 전환 기준
+
+운영 데이터에서 아래 조건 중 하나가 충족되면 PostgreSQL 전체 집계를 Redis Sorted Set 기반으로 전환한다.
+
+- `Run` 테이블이 100,000행 이상
+- `GET /leaderboard` 또는 `GET /leaderboard/me`의 p95 응답 시간이 7일 관측 기준 200ms 초과
+
+전환 시 쓰기 경로에서 유저별 집계 점수를 갱신하고, Redis 장애 시 PostgreSQL 쿼리로 폴백한다. 행 수는 주 1회, p95는 운영 모니터링에서 확인한다.
 
 ---
 
@@ -268,6 +277,10 @@ NestJS 구현 요소: `JwtStrategy`(passport-jwt) → `JwtAuthGuard` → `@Curre
 - **환경변수**: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CORS_ORIGIN`. `.env`는 git에 커밋하지 않는다.
 - **헬스체크**: `GET /health` — 배포·모니터링의 최소 단위.
 
+### 8.1 회원탈퇴 데이터 정책
+
+회원탈퇴는 개인정보를 남기지 않는 **완전 삭제**를 기본 정책으로 한다. 탈퇴 기능 구현 시 하나의 트랜잭션에서 자식 데이터를 먼저 삭제한 뒤 User를 삭제한다. 모델별 방침은 `RefreshToken`, `GameSave`, `BattleSession`(하위 `BattleEvent` 포함)은 캐스케이드 삭제, `Run`은 리더보드 기록까지 함께 삭제다. Prisma 관계에는 해당 기능 마이그레이션에서 `onDelete: Cascade`를 적용한다. 기능 도입 전에는 현재의 `RESTRICT`를 유지해 실수로 User만 삭제되어 고아 데이터가 생기는 일을 막는다.
+
 ```yaml
 # docker-compose.yml (로컬 개발용)
 services:
@@ -275,7 +288,7 @@ services:
     image: postgres:16
     environment:
       POSTGRES_PASSWORD: dev
-      POSTGRES_DB: survivor
+      POSTGRES_DB: varelion
     ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
 volumes:
@@ -289,7 +302,7 @@ volumes:
 각 단계는 "동작 확인 가능한 상태"로 끝난다. Swagger UI(`/api`)에서 직접 눌러보며 확인할 것.
 
 ### Phase 1 — 뼈대와 인증 (기본기)
-1. `nest new survivor-api` + Docker Compose로 PostgreSQL 실행
+1. `nest new varelion-api` + Docker Compose로 PostgreSQL 실행
 2. Prisma 셋업, User 모델, 마이그레이션 1회 경험
 3. 회원가입 (DTO 검증 + argon2 해시)
 4. 로그인 + JWT 발급 + JwtAuthGuard + `GET /users/me`
@@ -310,7 +323,7 @@ volumes:
 ### Phase 4 — 데일리 챌린지와 다듬기
 12. DailyChallenge: 매일 자정 시드 생성(`@nestjs/schedule` 크론) + 챌린지 리더보드
 13. 예외 필터/로깅/헬스체크 정리, e2e 테스트(supertest) 2~3개 작성
-14. 배포: **Railway에 확정 배포** (`survivor-api/railway.json`, Postgres 포함). 프론트는 **Vercel**.
+14. 배포: **Railway에 확정 배포** (`varelion-api/railway.json`, Postgres 포함). 프론트는 **Vercel**.
 
 ### Phase 5 — 심화 (선택)
 15. 리더보드 Redis Sorted Set 캐시로 교체 (`ZADD`/`ZREVRANGE`) — 3장 학습 팁 참고

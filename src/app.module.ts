@@ -10,10 +10,13 @@ import { RunsModule } from './runs/runs.module';
 import { SavesModule } from './saves/saves.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { BattleSessionsModule } from './battle-sessions/battle-sessions.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { IdleRewardsModule } from './idle-rewards/idle-rewards.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     PrismaModule,
     AuthModule,
@@ -22,6 +25,7 @@ import { BattleSessionsModule } from './battle-sessions/battle-sessions.module';
     SavesModule,
     LeaderboardModule,
     BattleSessionsModule,
+    IdleRewardsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

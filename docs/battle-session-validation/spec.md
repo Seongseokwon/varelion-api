@@ -45,7 +45,7 @@
 
 ## 기능 요구사항
 
-### 백엔드 (survivor-api)
+### 백엔드 (varelion-api)
 
 - **FR-1**: 로그인 사용자가 판을 시작하면 서버에 전투 세션이 생성된다. 세션은 소유 유저, 시작 시각, 진행 중(active)/종료(finalized) 상태를 가진다.
 - **FR-2**: 세션 생성 API는 인증을 요구하며, 생성된 세션의 식별자를 반환한다.
@@ -97,10 +97,10 @@
 
 | 파일 | 접점 |
 |------|------|
-| `survivor-api/prisma/schema.prisma` | 신규 `BattleSession` 모델(+ 이벤트 누적 필드 또는 별도 이벤트 테이블) 추가, `User`/`Run` 관계 확장. 마이그레이션 1회 필요 |
-| `survivor-api/src/runs/runs.service.ts` | 물리적 상식 검증(`MAX_KILLS_PER_SEC`, 제출 간격) 유지(FR-9) + 대조검증 로직 추가(FR-6~8). 신규 세션 조회/종료 처리 필요 |
-| `survivor-api/src/runs/dto/create-run.dto.ts` | `sessionId`(선택 필드) 추가 |
-| `survivor-api/src/` (신규 `battle-sessions/` 모듈 — 추정 네이밍) | 기존 `runs/`·`saves/` 모듈 패턴(controller/service/dto + `JwtAuthGuard` + `@CurrentUser`)을 따름. `app.module.ts`에 등록 |
+| `varelion-api/prisma/schema.prisma` | 신규 `BattleSession` 모델(+ 이벤트 누적 필드 또는 별도 이벤트 테이블) 추가, `User`/`Run` 관계 확장. 마이그레이션 1회 필요 |
+| `varelion-api/src/runs/runs.service.ts` | 물리적 상식 검증(`MAX_KILLS_PER_SEC`, 제출 간격) 유지(FR-9) + 대조검증 로직 추가(FR-6~8). 신규 세션 조회/종료 처리 필요 |
+| `varelion-api/src/runs/dto/create-run.dto.ts` | `sessionId`(선택 필드) 추가 |
+| `varelion-api/src/` (신규 `battle-sessions/` 모듈 — 추정 네이밍) | 기존 `runs/`·`saves/` 모듈 패턴(controller/service/dto + `JwtAuthGuard` + `@CurrentUser`)을 따름. `app.module.ts`에 등록 |
 | `src/systems/flow.js` | `levelUp()`(FR-14), `gameOver()`(FR-15 스테이지클리어, FR-18 세션id 포함 제출) — 현재 `submitRunResult()`가 `submitRun()` 호출하는 지점에 `sessionId` 추가 |
 | `src/systems/enemies.js:81` | `run.kills++` 지점 — 킬 카운트·골드 획득(`enemies.js:85-86`)을 세션 로컬 누적치에도 반영(FR-16) |
 | `src/state/run.js` | 세션 로컬 상태 확장 — `sessionId`, 배치 전송용 누적치(킬/골드), 배치 타이머(기존 `spawnTimer`/`potionTimer` 패턴과 동일하게 `update.js` 메인 루프에서 관리 — 추정) |

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import type { GameSave, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { recordMetaLevels } from '../common/meta-level-reached';
 import { META_LEVEL_CAP } from '../runs/dto/create-run.dto';
 import {
   GOLD_BASE_ALLOWANCE,
@@ -60,6 +61,7 @@ export class SavesService {
           version: dto.version + 1,
         },
       });
+      await recordMetaLevels(this.prisma, userId, 0, created.metaLevel);
       return { conflict: false, body: this.toResponse(created) };
     }
 
@@ -77,6 +79,7 @@ export class SavesService {
         ...columns,
         data: data as Prisma.InputJsonObject,
         version: dto.version + 1,
+        lastActiveAt: new Date(),
       },
     });
     if (updated.count === 0) {
@@ -87,6 +90,12 @@ export class SavesService {
       if (!current) throw new NotFoundException('save not found');
       return { conflict: true, body: this.toResponse(current) };
     }
+    await recordMetaLevels(
+      this.prisma,
+      userId,
+      existing.metaLevel,
+      columns.metaLevel,
+    );
     return {
       conflict: false,
       body: { version: dto.version + 1, save: dto.save },
