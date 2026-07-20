@@ -12,6 +12,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { BattleSessionsModule } from './battle-sessions/battle-sessions.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { IdleRewardsModule } from './idle-rewards/idle-rewards.module';
+import { LastGateModule } from './last-gate/last-gate.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { IdleRewardsModule } from './idle-rewards/idle-rewards.module';
     LeaderboardModule,
     BattleSessionsModule,
     IdleRewardsModule,
+    LastGateModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

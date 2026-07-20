@@ -119,3 +119,9 @@ Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
 # Shared game balance contract
 
 `src/config/game-balance.json` is the portable source of truth for job IDs, the meta-level curve, and save-growth validation limits. The frontend repository should consume or copy this file in its build pipeline; balance changes must start in this JSON rather than in DTOs or services.
+
+## Emberhold: The Last Gate room service
+
+The API also hosts the M1.5 two-player room and WebSocket input relay under the Socket.IO
+`/last-gate` namespace. See [`docs/last-gate-room-service.md`](docs/last-gate-room-service.md) for
+the protocol, reconnection contract, and current single-replica limitation.
