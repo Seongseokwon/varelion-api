@@ -69,4 +69,31 @@ describe('LastGateRoomService', () => {
       new LastGateRoomError('protocol-mismatch'),
     );
   });
+
+  it('removes a waiting room when no guest joins for three minutes', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1_000);
+    const host = service.createRoom('host-socket', LAST_GATE_PROTOCOL_VERSION);
+
+    jest.spyOn(Date, 'now').mockReturnValue(3 * 60 * 1000 + 1_000);
+    service.cleanupExpiredRooms();
+
+    expect(service.getRoomCount()).toBe(0);
+    expect(() => service.getSnapshot(host.roomCode)).toThrow(
+      new LastGateRoomError('room-not-found'),
+    );
+    expect(() => service.getMembership('host-socket')).toThrow(
+      new LastGateRoomError('not-in-room'),
+    );
+  });
+
+  it('keeps a full room after the waiting-room timeout', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1_000);
+    const host = service.createRoom('host-socket', LAST_GATE_PROTOCOL_VERSION);
+    service.joinRoom('guest-socket', host.roomCode, LAST_GATE_PROTOCOL_VERSION);
+
+    jest.spyOn(Date, 'now').mockReturnValue(3 * 60 * 1000 + 1_000);
+    service.cleanupExpiredRooms();
+
+    expect(service.getRoomCount()).toBe(1);
+  });
 });

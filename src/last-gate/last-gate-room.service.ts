@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Interval } from '@nestjs/schedule';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 import {
   LAST_GATE_PROTOCOL_VERSION,
@@ -12,6 +13,8 @@ import {
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_CODE_LENGTH = 6;
 const DISCONNECTED_ROOM_TTL_MS = 2 * 60 * 1000;
+const WAITING_ROOM_TTL_MS = 3 * 60 * 1000;
+const ROOM_CLEANUP_INTERVAL_MS = 30 * 1000;
 
 export class LastGateRoomError extends Error {
   constructor(readonly code: string) {
@@ -131,6 +134,11 @@ export class LastGateRoomService {
     return this.rooms.size;
   }
 
+  @Interval('last-gate-room-cleanup', ROOM_CLEANUP_INTERVAL_MS)
+  cleanupExpiredRooms(): void {
+    this.pruneExpiredRooms();
+  }
+
   private getRoom(roomCode: string): LastGateRoom {
     this.pruneExpiredRooms();
     const normalizedCode = roomCode.trim().toUpperCase();
@@ -194,15 +202,26 @@ export class LastGateRoomService {
   private pruneExpiredRooms(now = Date.now()): void {
     for (const room of this.rooms.values()) {
       const players = [...room.players.values()];
+      const waitingRoomExpired =
+        players.length < 2 && now - room.createdAt >= WAITING_ROOM_TTL_MS;
       const allDisconnected = players.every(
         (player) => player.socketId === null,
       );
       const lastDisconnect = Math.max(
         ...players.map((player) => player.disconnectedAt ?? room.createdAt),
       );
-      if (allDisconnected && now - lastDisconnect >= DISCONNECTED_ROOM_TTL_MS) {
-        this.rooms.delete(room.code);
+      const disconnectedRoomExpired =
+        allDisconnected && now - lastDisconnect >= DISCONNECTED_ROOM_TTL_MS;
+      if (waitingRoomExpired || disconnectedRoomExpired) {
+        this.deleteRoom(room);
       }
     }
+  }
+
+  private deleteRoom(room: LastGateRoom): void {
+    for (const player of room.players.values()) {
+      if (player.socketId) this.socketMemberships.delete(player.socketId);
+    }
+    this.rooms.delete(room.code);
   }
 }
