@@ -36,8 +36,10 @@ until shared room state and a Redis adapter are introduced.
 
 Input relay is capped at 120 messages per second per socket. One input object may contain at most
 16 primitive fields. Game clients should normally bundle or send at most one frame per simulation
-tick. Room operations are capped at 10 per minute per socket. A room whose players are all
-disconnected is retained for two minutes for reconnection and then removed opportunistically.
+tick. Room operations are capped at 10 per minute per socket. A waiting room expires when no guest
+joins within three minutes. A room whose players are all disconnected is retained for two minutes
+for reconnection. Expired rooms are swept every 30 seconds and opportunistically during room
+operations and status reads.
 
 ## HTTP status
 
