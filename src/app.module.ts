@@ -12,7 +12,11 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { BattleSessionsModule } from './battle-sessions/battle-sessions.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { IdleRewardsModule } from './idle-rewards/idle-rewards.module';
-import { LastGateModule } from './last-gate/last-gate.module';
+// LastGateModule is disabled, not deleted (2026-07-20): last-gate co-op is paused
+// (see varelion-last-gate MEMORY.md), and this keeps its WebSocket gateway and
+// `/last-gate/*` REST routes from being registered at all so no request can reach
+// them. Re-add to the imports array below to resume.
+// import { LastGateModule } from './last-gate/last-gate.module';
 
 @Module({
   imports: [
@@ -27,7 +31,6 @@ import { LastGateModule } from './last-gate/last-gate.module';
     LeaderboardModule,
     BattleSessionsModule,
     IdleRewardsModule,
-    LastGateModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
