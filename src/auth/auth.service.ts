@@ -11,9 +11,9 @@ import * as argon2 from 'argon2';
 import { UserEntity } from '@users/entities/user.entity';
 import { UsersService } from '@users/users.service';
 
-import { RegisterDto } from './dto/register.dto.';
-import { LoginDto } from './dto/login.dto';
-import { GenerateTokenPayload } from './types/auth.type';
+import { RegisterDto } from '@auth/dto/register.dto.';
+import { LoginDto } from '@auth/dto/login.dto';
+import { GenerateTokenPayload } from '@auth/types/auth.type';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
