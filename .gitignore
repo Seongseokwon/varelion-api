@@ -2,6 +2,7 @@
 /dist
 /node_modules
 /build
+*.tsbuildinfo
 
 # Logs
 logs
@@ -11,9 +12,14 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+pids
+*.pid
+*.pid.lock
 
 # OS
 .DS_Store
+Thumbs.db
+Desktop.ini
 
 # Tests
 /coverage
@@ -41,3 +47,13 @@ lerna-debug.log*
 !.env.example
 .cache
 .eslintcache
+.pnpm-store
+.tmp
+/tmp
+/temp
+
+/generated/prisma
+
+.agents/
+.claude/
+.windsurf
