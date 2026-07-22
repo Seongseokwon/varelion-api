@@ -1,17 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 
 import * as argon2 from 'argon2';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   async encryptPassword(password: string): Promise<string> {
     try {
-      const passwordHash = await argon2.hash(password);
+      const passwordHash: string = (await argon2.hash(password)) as string;
 
       return passwordHash;
-    } catch (error) {
-      throw new Error('Failed to encrypt password');
+    } catch (error: unknown) {
+      this.logger.error(
+        'Failed to encrypt password',
+        error instanceof Error ? error.stack : error,
+      );
+
+      throw new InternalServerErrorException('Failed to encrypt password');
     }
   }
 }
- 
