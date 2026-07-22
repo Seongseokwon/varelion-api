@@ -31,25 +31,6 @@
 $ npm install
 ```
 
-## Local development (DB + env)
-
-```bash
-# 1. 환경변수 설정
-$ cp .env.example .env
-
-# 2. PostgreSQL 컨테이너 실행 (docker-compose.yml)
-$ npm run db:up
-
-# 3. 마이그레이션 적용
-$ npx prisma migrate dev
-
-# 4. DB 컨테이너 중지
-$ npm run db:down
-
-# DB 로그 확인
-$ npm run db:logs
-```
-
 ## Compile and run the project
 
 ```bash
@@ -115,13 +96,3 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-
-# Shared game balance contract
-
-`src/config/game-balance.json` is the portable source of truth for job IDs, the meta-level curve, and save-growth validation limits. The frontend repository should consume or copy this file in its build pipeline; balance changes must start in this JSON rather than in DTOs or services.
-
-## Emberhold: The Last Gate room service
-
-The API also hosts the M1.5 two-player room and WebSocket input relay under the Socket.IO
-`/last-gate` namespace. See [`docs/last-gate-room-service.md`](docs/last-gate-room-service.md) for
-the protocol, reconnection contract, and current single-replica limitation.
