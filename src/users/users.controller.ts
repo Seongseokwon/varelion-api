@@ -1,5 +1,5 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto.';
+import { Controller, Get, Param } from '@nestjs/common';
+
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
 
@@ -7,8 +7,19 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post('create')
-  async createUser(@Body() dto: CreateUserDto): Promise<UserEntity> {
-    return await this.usersService.create(dto);
+  @Get('find-by-email/:email')
+  async findByEmail(@Param('email') email: string): Promise<UserEntity | null> {
+    const user = await this.usersService.findByEmail(email);
+
+    if (user) {
+      return new UserEntity(user);
+    }
+
+    return null;
+  }
+
+  @Get(':id')
+  findProfileById(@Param('id') id: string): Promise<UserEntity | null> {
+    return this.usersService.findProfileById(id);
   }
 }

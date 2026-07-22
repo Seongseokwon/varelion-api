@@ -1,33 +1,51 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto.';
+import { RegisterDto } from '../auth/dto/register.dto.';
 
-import { AuthService } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserEntity } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateUserDto) {
-    const passwordHash = await this.authService.encryptPassword(dto.password);
-
+  async create(dto: RegisterDto) {
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
-        passwordHash,
+        passwordHash: dto.password,
       },
     });
 
     return new UserEntity(user);
   }
 
-  findByEmail() {}
+  async findByEmail(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (user) {
+      return user;
+    }
+
+    return null;
+  }
+
+  async findProfileById(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (user) {
+      return new UserEntity(user);
+    }
+
+    return null;
+  }
 
   findById() {}
-
-  findProfileById() {}
 }
