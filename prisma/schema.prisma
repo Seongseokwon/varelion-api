@@ -28,5 +28,280 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt() @map("updated_at")
 
+  characters Character[]
+
   @@map("users")
+}
+
+// =====================================================================
+// Game domain (MVP) — VARELION
+// 설계 근거: dev-game/docs/data-schema.md, domain-model.md
+// PK = cuid String (User와 통일), 큰 수치 값만 BigInt.
+// 최종 능력치는 저장하지 않음(파생 계산). 방치는 재화만 지급.
+// =====================================================================
+
+enum CurrencyType {
+  GOLD
+  MATERIAL
+}
+
+enum StatType {
+  ATK
+  MAX_HP
+  ATK_SPEED
+  REGEN
+}
+
+enum JobLineage {
+  WARRIOR
+  MAGE
+  ARCHER
+}
+
+enum WeaponBranch {
+  TWO_HANDED
+  SWORD_SHIELD
+  NONE
+}
+
+enum StageType {
+  NORMAL
+  BOSS
+}
+
+enum ItemType {
+  WEAPON
+  ARMOR
+  ACCESSORY
+  MATERIAL
+  CONSUMABLE
+}
+
+enum ItemRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
+}
+
+enum EquipmentSlot {
+  WEAPON
+  HELMET
+  ARMOR
+  GLOVES
+  SHOES
+  NECKLACE
+  RING_LEFT
+  RING_RIGHT
+}
+
+model Character {
+  id       String @id @default(cuid())
+  userId   String @map("user_id")
+  nickname String @unique @db.VarChar(30)
+
+  // 능동 플레이로만 증가 (방치로는 오르지 않음)
+  level             Int    @default(1)
+  experience        BigInt @default(0)
+  unspentStatPoints Int    @default(0) @map("unspent_stat_points")
+
+  currentJobId String? @map("current_job_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentJob JobDefinition? @relation("CharacterCurrentJob", fields: [currentJobId], references: [id], onDelete: SetNull)
+
+  stats         CharacterStat[]
+  currencies    CharacterCurrency[]
+  items         CharacterItem[]
+  equipment     CharacterEquipment[]
+  stageProgress CharacterStageProgress[]
+  idleProgress  CharacterIdleProgress?
+
+  @@index([userId])
+  @@index([currentJobId])
+  @@index([level, experience])
+  @@map("characters")
+}
+
+// 스탯 분배 — (B) 유연 저장. 스탯 추가 시 enum 값만 늘리면 됨.
+model CharacterStat {
+  characterId String   @map("character_id")
+  statType    StatType @map("stat_type")
+  points      Int      @default(0)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@id([characterId, statType])
+  @@map("character_stats")
+}
+
+model CharacterCurrency {
+  characterId  String       @map("character_id")
+  currencyType CurrencyType @map("currency_type")
+  amount       BigInt       @default(0)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@id([characterId, currencyType])
+  @@map("character_currencies")
+}
+
+// 전직 트리 (마스터). 자기참조로 parent 연결.
+model JobDefinition {
+  id   String @id @default(cuid())
+  code String @unique @db.VarChar(50)
+  name String @db.VarChar(100)
+
+  lineage         JobLineage
+  weaponBranch    WeaponBranch @default(NONE) @map("weapon_branch")
+  tier            Int // 0=초보자, 1=전사(공통), 2~5=라인 전직
+  requiredChapter Int          @default(0) @map("required_chapter") // 전직 개방 챕터(1차=2, 2차=5, 3차=10, 4차=15, 5차=20)
+  requiredLevel   Int          @default(1) @map("required_level") // 소프트 레벨 조건
+
+  parentJobId String? @map("parent_job_id")
+
+  // 게임 데이터 키 (실제 스킬/카드 정의는 게임 데이터 파일에 위치)
+  basicAttackSkillCode String? @map("basic_attack_skill_code") @db.VarChar(50)
+  cardPoolKey          String? @map("card_pool_key") @db.VarChar(50)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parentJob  JobDefinition?  @relation("JobTree", fields: [parentJobId], references: [id], onDelete: SetNull)
+  childJobs  JobDefinition[] @relation("JobTree")
+  characters Character[]     @relation("CharacterCurrentJob")
+
+  @@index([lineage, weaponBranch, tier])
+  @@index([parentJobId])
+  @@map("job_definitions")
+}
+
+// 스테이지 (마스터). 일반 챕터 10 / 5의 배수 챕터 15, 마지막 스테이지 BOSS.
+model StageDefinition {
+  id   String @id @default(cuid())
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(100)
+
+  chapter     Int
+  stageNumber Int       @map("stage_number")
+  stageType   StageType @default(NORMAL) @map("stage_type")
+
+  recommendedPower BigInt @default(0) @map("recommended_power")
+
+  // 방치 재화율 (재화만 — 경험치는 지급하지 않음)
+  goldPerSecond     BigInt @default(0) @map("gold_per_second")
+  materialPerSecond BigInt @default(0) @map("material_per_second")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  characterProgress CharacterStageProgress[]
+  idleCharacters    CharacterIdleProgress[]
+
+  @@unique([chapter, stageNumber])
+  @@index([chapter])
+  @@map("stage_definitions")
+}
+
+model CharacterStageProgress {
+  characterId String @map("character_id")
+  stageId     String @map("stage_id")
+
+  isCleared       Boolean @default(false) @map("is_cleared")
+  clearCount      Int     @default(0) @map("clear_count")
+  bestClearTimeMs Int?    @map("best_clear_time_ms")
+
+  firstClearedAt DateTime? @map("first_cleared_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  character Character       @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  stage     StageDefinition @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@id([characterId, stageId])
+  @@index([stageId])
+  @@index([characterId, isCleared])
+  @@map("character_stage_progress")
+}
+
+// 방치 파밍 — 재화만. 보상은 서버 시간 기반 계산(저장 X).
+model CharacterIdleProgress {
+  characterId    String @id @map("character_id")
+  farmingStageId String @map("farming_stage_id")
+
+  farmingStartedAt DateTime @default(now()) @map("farming_started_at")
+  lastClaimedAt    DateTime @default(now()) @map("last_claimed_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  character    Character       @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  farmingStage StageDefinition @relation(fields: [farmingStageId], references: [id], onDelete: Restrict)
+
+  @@index([farmingStageId])
+  @@map("character_idle_progress")
+}
+
+// 아이템 원본 (마스터). MVP는 무기.
+model ItemDefinition {
+  id   String @id @default(cuid())
+  code String @unique @db.VarChar(50)
+  name String @db.VarChar(100)
+
+  itemType ItemType   @map("item_type")
+  rarity   ItemRarity
+
+  baseAttack     Int @default(0) @map("base_attack")
+  maxEnhancement Int @default(0) @map("max_enhancement")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  characterItems CharacterItem[]
+
+  @@index([itemType])
+  @@index([rarity])
+  @@map("item_definitions")
+}
+
+model CharacterItem {
+  id               String @id @default(cuid())
+  characterId      String @map("character_id")
+  itemDefinitionId String @map("item_definition_id")
+
+  quantity         Int @default(1)
+  enhancementLevel Int @default(0) @map("enhancement_level")
+
+  acquiredAt DateTime @default(now()) @map("acquired_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  character      Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  itemDefinition ItemDefinition @relation(fields: [itemDefinitionId], references: [id], onDelete: Restrict)
+
+  equipment CharacterEquipment?
+
+  @@index([characterId])
+  @@index([itemDefinitionId])
+  @@map("character_items")
+}
+
+model CharacterEquipment {
+  characterId     String        @map("character_id")
+  slotType        EquipmentSlot @map("slot_type")
+  characterItemId String        @unique @map("character_item_id")
+
+  equippedAt DateTime @default(now()) @map("equipped_at")
+
+  character     Character     @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  characterItem CharacterItem @relation(fields: [characterItemId], references: [id], onDelete: Cascade)
+
+  @@id([characterId, slotType])
+  @@index([characterItemId])
+  @@map("character_equipment")
 }
